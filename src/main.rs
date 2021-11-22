@@ -3,6 +3,7 @@ use std::time::Instant;
 use anyhow;
 use structopt::StructOpt;
 use tracing::info;
+use rand::prelude::*;
 
 #[derive(Debug, Clone, StructOpt)]
 struct Bench {
@@ -28,8 +29,9 @@ async fn run_one(url: &str) -> anyhow::Result<u64> {
     Ok(num_bytes)
 }
 
-async fn run_bench(run_id: usize, bench: Bench) {
+async fn run_bench(run_id: usize, mut bench: Bench) {
     loop {
+        bench.urls.shuffle(&mut rand::thread_rng());
         for url in &bench.urls {
             let now = Instant::now();
             let res_one = run_one(url).await;
@@ -47,7 +49,7 @@ async fn main() -> anyhow::Result<()> {
     for i in 0..bench.concurrency {
         let bench_clone = bench.clone();
         let handle = tokio::spawn(async move { run_bench(i, bench_clone).await });
-        threads.push(handle)
+        threads.push(handle);
     }
     for handle in threads {
         handle.await?;
